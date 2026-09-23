@@ -107,3 +107,12 @@ dsh web --host 127.0.0.1 --port 3080
 5. 使用自定义 CC Switch 目录时，`DSH_CCSWITCH_DB` 是否指向正确的 `cc-switch.db` 文件。
 
 如果市场提示 `@google/genai` 或 `protobufjs` 的构建脚本被 pnpm 拦截，请更新到 `dsh-ccswitch` `0.1.1` 或更高版本后重新安装。新版会使用 DSH 已提供的运行时依赖，不需要为这两个包单独放行构建脚本。
+
+## 升级 DSH 后插件无法加载
+
+`0.1.1` 及更早版本只适配 DSH `0.1.1` 之前的接口。这些版本依赖 `@deepseek-ai/dsh-llm` 的 `CallId`，而 DSH `0.1.2` 起已将其改名为 `ToolCallId`；同时 `@earendil-works/pi-ai` `0.83` 起为停止原因新增了 `pending` 和 `deferred`。因此升级 DSH 后会出现以下现象：
+
+- DSH 启动时报错：`The requested module '@deepseek-ai/dsh-llm' does not provide an export named 'CallId'`；
+- 模型选择器中不再出现 CC Switch 的 provider 和模型。
+
+请更新到 `dsh-ccswitch` `0.1.2` 或更高版本后重新安装并重启 DSH。`0.1.2` 适配 DSH `0.1.5`（`@deepseek-ai/dsh-llm` `0.1.5-rc`、`@earendil-works/pi-ai` `0.85`）。

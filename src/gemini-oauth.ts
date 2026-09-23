@@ -255,7 +255,11 @@ function streamOAuth(model: GeminiModel, context: Context, options: StreamOption
       if (current.value?.type === 'text') stream.push({ type: 'text_end', contentIndex: output.content.length - 1, content: current.value.text, partial: output })
       if (current.value?.type === 'thinking') stream.push({ type: 'thinking_end', contentIndex: output.content.length - 1, content: current.value.thinking, partial: output })
       if (options.signal?.aborted) throw new Error('Request was aborted')
-      if (output.stopReason === 'error' || output.stopReason === 'aborted') throw new Error('Gemini OAuth response was not successful')
+      // `pending` is pi-ai's pre-terminal placeholder; reaching the end of the
+      // SSE stream with it still set means no terminal finish reason arrived.
+      if (output.stopReason === 'error' || output.stopReason === 'aborted' || output.stopReason === 'pending') {
+        throw new Error('Gemini OAuth response was not successful')
+      }
       stream.push({ type: 'done', reason: output.stopReason, message: output })
       stream.end()
     } catch (error) {
