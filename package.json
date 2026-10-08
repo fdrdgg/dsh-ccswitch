@@ -5,11 +5,11 @@
   "packageManager": "pnpm@11.7.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/upJiang/dsh-ccswitch.git"
+    "url": "git+https://github.com/fdrdgg/dsh-ccswitch.git"
   },
-  "homepage": "https://github.com/upJiang/dsh-ccswitch#readme",
+  "homepage": "https://github.com/fdrdgg/dsh-ccswitch#readme",
   "bugs": {
-    "url": "https://github.com/upJiang/dsh-ccswitch/issues"
+    "url": "https://github.com/fdrdgg/dsh-ccswitch/issues"
   },
   "license": "MIT",
   "engines": {
