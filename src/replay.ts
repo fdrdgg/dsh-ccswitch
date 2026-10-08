@@ -10,7 +10,7 @@
 
 import { LlmError } from '@deepseek-ai/dsh-llm'
 import type { Message, ModelMessageSource, ReplayEnvelope } from '@deepseek-ai/dsh-llm'
-import type { Api, AssistantMessage, Usage as PiUsage } from '@earendil-works/pi-ai'
+import type { Api, AssistantMessage, JsonObject, Usage as PiUsage } from '@earendil-works/pi-ai'
 
 /** Per-block half of the pi-ai replay envelope, one entry per content block. */
 export type PiAiReplayBlock =
@@ -36,12 +36,18 @@ interface PiAiReplayState {
   blocks: PiAiReplayBlock[]
 }
 
-/** Parse tool-call argument JSON; tolerate model malformations with {}. */
-function parseArguments(raw: string): Record<string, unknown> {
+/**
+ * Parse tool-call argument JSON; tolerate model malformations with {}.
+ *
+ * pi-ai types tool-call arguments as `JsonObject`. Every value `JSON.parse`
+ * can produce is by construction a `JsonValue`, so narrowing the parsed
+ * non-array object to `JsonObject` is sound rather than a blind cast.
+ */
+function parseArguments(raw: string): JsonObject {
   try {
     const parsed: unknown = JSON.parse(raw)
     if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>
+      return parsed as JsonObject
     }
   } catch {
     // fall through

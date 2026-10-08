@@ -1,11 +1,15 @@
 import {
   calculateCost,
   createAssistantMessageEventStream,
-  type Context,
+  getCurrentTools,
+  getInitialSystemMessage,
+  getSystemMessageText,
+  type JsonObject,
   type Model,
   type ProviderStreams,
   type SimpleStreamOptions,
   type StreamOptions,
+  type TranscriptContext,
 } from '@earendil-works/pi-ai'
 import type { AssistantMessage, AssistantMessageEventStream, StopReason, Usage } from '@earendil-works/pi-ai'
 import {
@@ -44,7 +48,7 @@ interface GeminiPart {
   readonly functionCall?: {
     readonly id?: string
     readonly name?: string
-    readonly args?: Record<string, unknown>
+    readonly args?: JsonObject
   }
 }
 
@@ -80,21 +84,27 @@ function headers(options: StreamOptions): Record<string, string> {
   return result
 }
 
-function payload(model: GeminiModel, context: Context, options: StreamOptions): GeminiPayload {
-  const mode = context.tools === undefined || context.tools.length === 0
+function payload(model: GeminiModel, context: TranscriptContext, options: StreamOptions): GeminiPayload {
+  // pi-ai normalizes a caller's Context into a transcript: the prompt and the
+  // current tool set live on the transcript's system message, not beside it.
+  const initialSystemMessage = getInitialSystemMessage(context.messages)
+  const systemInstruction = initialSystemMessage === undefined ? '' : getSystemMessageText(initialSystemMessage)
+  const currentTools = getCurrentTools(context.messages)
+  const supportsStrictMode = supportsGoogleStrictToolSampling(model.id)
+  const mode = currentTools.length === 0
     ? undefined
     : resolveGoogleFunctionCallingMode(
-      context.tools,
+      currentTools,
       (options as SimpleStreamOptions & { toolChoice?: string }).toolChoice,
-      supportsGoogleStrictToolSampling(model.id),
+      supportsStrictMode,
     )
   const config: GeminiPayload = {
     contents: convertMessages(model, context),
-    ...(context.systemPrompt === undefined ? {} : {
-      systemInstruction: { role: 'user', parts: [{ text: context.systemPrompt }] },
+    ...(systemInstruction.length === 0 ? {} : {
+      systemInstruction: { role: 'user', parts: [{ text: systemInstruction }] },
     }),
-    ...(context.tools === undefined || context.tools.length === 0 ? {} : {
-      tools: convertTools(context.tools),
+    ...(currentTools.length === 0 ? {} : {
+      tools: convertTools(currentTools, false, supportsStrictMode),
       ...(mode === undefined ? {} : { toolConfig: { functionCallingConfig: { mode } } }),
     }),
     ...(options.temperature === undefined && options.maxTokens === undefined ? {} : {
@@ -194,7 +204,7 @@ function createOutput(model: GeminiModel): AssistantMessage {
   }
 }
 
-function streamOAuth(model: GeminiModel, context: Context, options: StreamOptions): AssistantMessageEventStream {
+function streamOAuth(model: GeminiModel, context: TranscriptContext, options: StreamOptions): AssistantMessageEventStream {
   const stream = createAssistantMessageEventStream()
   void (async () => {
     const output = createOutput(model)

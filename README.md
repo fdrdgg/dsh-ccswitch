@@ -2,7 +2,7 @@
 
 在 DeepSeek Harness（DSH）中直接使用 [CC Switch](https://github.com/farion1231/cc-switch) 已配置的 Claude、Codex/GPT 和 Gemini 模型。
 
-插件会自动读取当前设备上的 CC Switch 配置，不需要在 DSH 中重复填写 API key 或登录信息。模型选择器中还会增加模型名称搜索。
+插件会自动读取当前设备上的 CC Switch 配置，不需要在 DSH 中重复填写 API key 或登录信息。
 
 支持 macOS、Windows 和 Linux。
 
@@ -32,9 +32,9 @@ dsh web --host 127.0.0.1 --port 3080
 
 打开 DSH 的模型选择器：
 
-1. 找到名称以 CC Switch provider 显示的模型分组。
+1. 找到名称为 CC Switch provider 的模型分组。
 2. 直接选择需要的模型。
-3. 模型较多时，在顶部的“搜索模型”输入框中输入模型名称。
+3. 模型较多时，DSH 会在菜单顶部自动显示搜索框，输入模型名称即可筛选。
 
 插件会自动读取 CC Switch 后续的配置变化。添加、删除或修改 provider 后，通常不需要重新安装插件。
 
@@ -110,9 +110,16 @@ dsh web --host 127.0.0.1 --port 3080
 
 ## 升级 DSH 后插件无法加载
 
-`0.1.1` 及更早版本只适配 DSH `0.1.1` 之前的接口。这些版本依赖 `@deepseek-ai/dsh-llm` 的 `CallId`，而 DSH `0.1.2` 起已将其改名为 `ToolCallId`；同时 `@earendil-works/pi-ai` `0.83` 起为停止原因新增了 `pending` 和 `deferred`。因此升级 DSH 后会出现以下现象：
+DSH 目前仍处于 pre-release，`@deepseek-ai/dsh-llm` 与 `@earendil-works/pi-ai` 的内部接口在版本之间会发生变化，因此每个 `dsh-ccswitch` 版本只适配同一代的 DSH。
 
-- DSH 启动时报错：`The requested module '@deepseek-ai/dsh-llm' does not provide an export named 'CallId'`；
-- 模型选择器中不再出现 CC Switch 的 provider 和模型。
+| 现象 | 受影响版本 | 原因 | 修复版本 |
+| --- | --- | --- | --- |
+| 启动报错 `does not provide an export named 'CallId'` | `0.1.1` 及更早 | DSH `0.1.2` 起把 `CallId` 改名为 `ToolCallId`；`pi-ai` `0.83` 起停止原因新增 `pending`/`deferred` | `0.1.2` |
+| 启动报错 `does not provide an export named 'CallId'`，或模型转换失败 | `0.1.2` | DSH `0.2.0` 起把工具结果改为独立的 `tool` 角色消息（不再是 `tool-result` 内容块），新增 `developer` 角色，并把 provider 入参改为 `TranscriptContext` | `0.1.3` |
 
-请更新到 `dsh-ccswitch` `0.1.2` 或更高版本后重新安装并重启 DSH。`0.1.2` 适配 DSH `0.1.5`（`@deepseek-ai/dsh-llm` `0.1.5-rc`、`@earendil-works/pi-ai` `0.85`）。
+请更新到 `dsh-ccswitch` `0.1.3` 或更高版本后重新安装并重启 DSH：
+
+- `0.1.2` 适配 DSH `0.1.5`（`@deepseek-ai/dsh-llm` `0.1.5-rc`、`@earendil-works/pi-ai` `0.85`）；
+- `0.1.3` 适配 DSH `0.2.0`（`@deepseek-ai/dsh-llm` `0.2.0-rc`、`@earendil-works/pi-ai` `0.87`）。该版本不再自带模型搜索：DSH `0.2.0` 已在模型选择器中内置搜索，旧的自定义搜索依赖的 DOM 结构同时发生了变化。
+
+> 重要：profile 的 `package.json` 会把插件固定到某个 git commit。升级 DSH 或重新执行 `dsh plugin add` 会用该 commit 覆盖本地已安装的 `lib`。因此修复后必须让固定版本指向包含修复的提交，否则问题会再次出现。
