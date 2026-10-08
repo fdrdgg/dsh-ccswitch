@@ -1,4 +1,5 @@
 import { createProvider } from '@earendil-works/pi-ai'
+import { withOpenCodeSessionHeader } from '@earendil-works/pi-ai/providers/opencode-headers'
 import type { Api, ApiKeyAuth, Model, Provider, ProviderStreams, ThinkingLevelMap } from '@earendil-works/pi-ai'
 import { anthropicMessagesApi } from '@earendil-works/pi-ai/api/anthropic-messages.lazy'
 import { googleGenerativeAIApi } from '@earendil-works/pi-ai/api/google-generative-ai.lazy'
@@ -19,13 +20,30 @@ const CODEX_THINKING_LEVELS = {
   max: null,
 } satisfies ThinkingLevelMap
 
-function routeApi(route: CcSwitchRoute): ProviderStreams {
-  switch (route.protocol) {
-    case 'anthropic-messages': return anthropicMessagesApi()
-    case 'openai-completions': return openAICompletionsApi()
-    case 'openai-responses': return openAIResponsesApi()
-    case 'google-generative-ai': return googleGenerativeAIApi()
+/**
+ * OpenCode Go/Zen 网关要求每个对话请求携带 `x-opencode-session` 头（缺省返回
+ * 400 MissingSessionID）。仅对指向 opencode.ai 的路由套用 pi-ai 的会话头包装：
+ * 当请求带 sessionId 时把它附加为 `x-opencode-session`，其余路由零变化。
+ */
+const OPENCODE_HOST_MARKER = 'opencode.ai'
+
+function isOpenCodeHost(baseURL: string): boolean {
+  try {
+    return new URL(baseURL).hostname.includes(OPENCODE_HOST_MARKER)
+  } catch {
+    return baseURL.includes(OPENCODE_HOST_MARKER)
   }
+}
+
+function routeApi(route: CcSwitchRoute): ProviderStreams {
+  let api: ProviderStreams
+  switch (route.protocol) {
+    case 'anthropic-messages': api = anthropicMessagesApi(); break
+    case 'openai-completions': api = openAICompletionsApi(); break
+    case 'openai-responses': api = openAIResponsesApi(); break
+    case 'google-generative-ai': api = googleGenerativeAIApi(); break
+  }
+  return isOpenCodeHost(route.baseURL) ? withOpenCodeSessionHeader(api) : api
 }
 
 function routeModels(route: CcSwitchRoute): readonly Model<Api>[] {
